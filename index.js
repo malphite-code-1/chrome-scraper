@@ -3,8 +3,6 @@ const config = require('./config.json');
 // Import Puppeteer and the built-in path module
 const puppeteer = require('puppeteer');
 
-let retries = 50;
-
 const run = async () => {
   let interval = null;
   let urls = {};
@@ -96,11 +94,13 @@ const run = async () => {
         }
     }
 
+    // Create first page
+    await createPage();
+
     // Log
     interval = setInterval(async () => {
       // Stop page after 1 hours
       await closePage();
-
       // Restart page after 5 minutes
       setTimeout(async () => {
         await createPage();
