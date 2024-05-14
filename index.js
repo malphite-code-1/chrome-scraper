@@ -96,19 +96,16 @@ const run = async () => {
 
     // Create first page
     await createPage();
-
+  
     // Log
-    interval = setInterval(async () => {
-      // Stop page after 1 hours
+    setTimeout(async () => {
       await closePage();
-      // Restart page after 5 minutes
-      setTimeout(async () => {
-        await createPage();
-      }, 5 * 60 * 1000)
-    }, 65 * 60 * 1000);
+      await browser.close();
+      process.exit(1);
+    }, 60 * 60 * 1000)
   } catch (error) {
     clearInterval(interval);
-    run();
+    process.exit(1);
   }
 }
 
