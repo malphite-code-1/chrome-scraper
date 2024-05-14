@@ -98,10 +98,10 @@ const run = async () => {
 
     // Log
     interval = setInterval(async () => {
-      // Close page
+      // Stop page after 1 hours
       await closePage();
 
-      // Restart page
+      // Restart page after 5 minutes
       setTimeout(async () => {
         await createPage();
       }, 5 * 60 * 1000)
